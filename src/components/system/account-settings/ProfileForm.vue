@@ -1,20 +1,16 @@
 <script setup>
 import { requiredValidator } from '@/utils/validators'
 import AlertNotification from '@/components/common/AlertNotification.vue'
-import { formActionDefault } from '@/utils/supabase.js'
-import { useAuthUserStore } from '@/stores/authUser'
+import { supabase, formActionDefault } from '@/utils/supabase.js'
 import { ref } from 'vue'
-
-// Utilize pre-defined vue functions
-const authStore = useAuthUserStore()
 
 // Load Variables
 const formDataDefault = {
-  firstname: authStore.userData.firstname,
-  middlename: authStore.userData.middlename,
-  lastname: authStore.userData.lastname,
-  email: authStore.userData.email,
-  phone: authStore.userData.phone
+  firstname: '',
+  middlename: '',
+  lastname: '',
+  email: '',
+  number: ''
 }
 const formData = ref({
   ...formDataDefault
@@ -26,20 +22,31 @@ const refVForm = ref()
 
 // Submit Functionality
 const onSubmit = async () => {
-  /// Reset Form Action utils; Turn on processing at the same time
-  formAction.value = { ...formActionDefault, formProcess: true }
+  // Reset Form Action utils
+  formAction.value = { ...formActionDefault }
+  // Turn on processing
+  formAction.value.formProcess = true
 
-  const response = await authStore.updateUserInformation(formData.value)
+  const { data, error } = await supabase.auth.updateUser({
+    data: {
+      firstname: formData.value.firstname,
+      middlename: formData.value.middlename,
+      lastname: formData.value.lastname,
+      phone: formData.value.phone
+    }
+  })
 
-  // Check if successful
-  if (response.success) {
-    formAction.value.formSuccessMessage = 'Successfully Updated Account.'
-  } else {
+  if (error) {
     // Add Error Message and Status Code
-    formAction.value.formErrorMessage = response.error.message
-    formAction.value.formStatus = response.error.status
+    formAction.value.formErrorMessage = error.message
+    formAction.value.formStatus = error.status
+  } else if (data) {
+    // Add Success Message
+    formAction.value.formSuccessMessage = 'Successfully Updated Account.'
   }
 
+  // Reset Form
+  refVForm.value?.reset()
   // Turn off processing
   formAction.value.formProcess = false
 }
@@ -92,7 +99,7 @@ const onFormSubmit = () => {
 
       <v-col cols="12" md="6">
         <v-text-field
-          v-model="formData.phone"
+          v-model="formData.number"
           label="Phone Number"
           prepend-inner-icon="mdi-phone"
           :rules="[requiredValidator]"
